@@ -9,13 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "co": "^4.6.0",
-    "collections": "^5.1.2",
-    "events": "^2.0.0",
-    "greenlet": "^1.0.1",
     "npm": "^6.1.0",
     "sleep": "^5.1.1",
-    "threads": "^0.11.0",
     "zerorpc": "^0.9.7"
   }
 }

@@ -127,7 +127,6 @@ Bully.election = function() {                                       // When elec
 	this.S.halt = this.priority;
 	this.S.Up = [];
 	// first time: this.priority = 0 for :9000, 1 for :9001
-	// console.log(this.priority)
 	for (let i = 0; i <= this.priority; i++) {
 		try {
 			this.connections[i].halt(this.priority); //only works for Bully objects

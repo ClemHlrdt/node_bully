@@ -1,10 +1,8 @@
 const zerorpc = require('zerorpc');
 const fs = require('fs');
 const sleep = require('sleep');
-//const spawn = threads.spawn;
-//const thread = spawn(function() {});
 
-//nvm use v8.11.1
+//nvm use v8.11.2
 
 class State {
 	constructor() {

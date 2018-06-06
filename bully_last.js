@@ -1,7 +1,6 @@
 const zerorpc = require('zerorpc');
 const fs = require('fs');
 const sleep = require('sleep');
-const threads = require('threads');
 //const spawn = threads.spawn;
 //const thread = spawn(function() {});
 

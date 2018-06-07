@@ -134,7 +134,7 @@ Bully.election = function() { // When election is called...
 						this.checkServerPool = "something";
 						// this.check();                                      // call check()
 					}
-					// return;
+					return;
 				})
 				.catch(() => {
 					if(i!=restOfElements.length){
@@ -142,33 +142,79 @@ Bully.election = function() { // When election is called...
 					}
 					else{
 						console.log('halt all lower priority nodes including this node:');
-					    this.individualHalt(this.priority); //
+					    // this.individualHalt(this.priority); //
 					    console.log(`${this.servers[this.priority]}: I halted myself`)
 					    this.S.state = 'Election';
 					    console.log(`I am ${this.S.state}`);
 					    this.S.halt = this.priority;
 					    this.S.Up = [];
+					    this.S.Up.push(this);
+					    var counter = 0;
 					    for (let j = 0; j < this.priority; j++) {
-					        	this.syncFuncCall("halt", this.connections[j], this.priority)
-						        	.then(()=>{
-						        		console.log(`Prompt: ${this.servers[j]} server halted successfully`);
-						        	})
-						        	.catch(()=>{
-						        		console.log(`Prompt: ${this.servers[j]} Timeout 2, server not reachable, cannot halt`);
-						        		// continue;
-						        	})
-						        	.finally(() =>{
-						        		this.S.Up.push(this.connections[j]);
-						        	});
-					    }
+					        		this.syncFuncCall("halt", this.connections[j], this.priority)
+							        	.then(()=>{
+							        		console.log(`Prompt: ${this.servers[j]} server halted successfully`);
+							        	})
+							        	.catch(()=>{
 
+							        		console.log(`Prompt: ${this.servers[j]} Timeout 2, server not reachable, cannot halt`);
+							        		// continue;
+							        	})
+							        	.finally(() =>{
+							        		this.S.Up.push(this.connections[j]);
+							        		if(counter == this.servers.length-2){
+							        			console.log("inform all nodes of new coordinator");
+							        			this.S.coord = this.priority;
+							        			this.S.State = "Reorganization";
+							        			var counter2 = 0;
+							        			for(let k = 0;k<this.S.Up.length;k++){
+							        				if (this.servers[this.priority]!=this.servers[k]){
+							        					this.syncFuncCall("newCoordinator", this.S.Up[k], this.priority)
+												        	.then(()=>{
+												        		console.log(`Prompt: ${this.servers[k]} server received new coordinator`);
+												        	})
+												        	.catch(()=>{
+												        		console.log(`Prompt: ${this.servers[k]} Timeout 3, server not reachable, election has to be restarted`);
+												        		// this.election();
+												        	})
+												        	.finally(() => {
+												        		console.log(counter2)
+												        		if(counter2==this.servers.length-2){
+												        			var counter3 = 0;
+												        			for(let l=0;l<this.S.Up.length;l++){
+												        				if (this.servers[this.priority]!=this.servers[l]){
+												        					this.syncFuncCall("ready", this.S.Up[l], this.priority)
+																	        	.then(()=>{
+																	        		console.log(`Prompt: ${this.servers[l]} server is ready (not coordinator)`);
+																	        	})
+																	        	.catch(()=>{
+																	        		console.log(`Prompt: ${this.servers[l]} Timeout 4, server lost connection, election has to be restarted`);
+																	        		// this.election();
+																	        	}).finally(()=>{
+																	        		if(counter3==this.servers.length-2){
+																	        			// this.check();
+																	        			console.log("implement check!!!")
+																	        		}
+																	        		counter3++;
+																	        	});
+												        				} else {
+												        					this.S.state = "Normal";
+												        				}
+												        			}
+												        		}
+												        		counter2++;
+												        	});
+							        				}
+							        			}
+							        		}
+							        		counter++;
+							        	});
+					    }
 					}
 					
 				})
 	}
 }		
-
-// console.log(Bully.S.Up.length);
 
 
 //         try {

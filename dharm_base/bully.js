@@ -17,35 +17,10 @@ class State {
     }
 }
 
-function syncFuncCall(func_name, client_test) {
-	return new Promise((resolve, reject) => {
-		// console.log()
-		client_test.invoke(func_name, function(error, res, more){
-			if (error || !res){
-				return reject(error);
-				// return reject();
-			}
-			else{
-				return resolve(res);
-			}
-			
-		});
-	});
-}
-
-async function driverMain(func_name, client_test){
-	var result = await syncFuncCall(func_name, client_test).catch((error) => {});
-	// if(!result){
-		// throw new Error;
-	// 	return null;
-	// }
-	return result;
-}
-
 var Bully = new Object();
+
 Bully.S = new State();
 Bully.S.state = 'Normal';
-
 Bully.checkServerPool = null; //empty pool
 
 const address = process.argv[2];
@@ -64,6 +39,7 @@ Bully.connections = [];
 
 // Assigning priority varirable based on the order in the list
 for (let i = 0; i < Bully.servers.length; i++) {
+
     if (Bully.servers[i] == Bully.addr) {
         Bully.priority = i;
         Bully.connections.push(Bully);
@@ -75,11 +51,13 @@ for (let i = 0; i < Bully.servers.length; i++) {
     }
 }
 
+//to be called for clients
 Bully.areYouThere = function(reply) {
     console.log('METHOD INVOKED!!!!!!!!!!!!!!')
     reply(null, true);
 }
 
+//to be called for clients
 Bully.areYouNormal = function(reply) {
     console.log('METHOD INVOKED!!!!!!!!!!!!!!')
     if (this.S.state == 'Normal') {
@@ -89,11 +67,13 @@ Bully.areYouNormal = function(reply) {
     }
 }
 
+//to be called for clients
 Bully.halt = function(number) {
     this.S.state = 'Election';
     this.S.halt = number
 }
 
+//to be called for clients
 Bully.newCoordinator = function(nb) {
     console.log('call newCoordinator');
     if (this.S.halt == nb && this.S.state == 'Election') {
@@ -102,6 +82,7 @@ Bully.newCoordinator = function(nb) {
     }
 }
 
+//to be called for clients
 Bully.ready = function(nb, x = null) {
     console.log("call ready");
     if (this.S.coord == nb && this.S.state == "Reorganization") {
@@ -109,24 +90,14 @@ Bully.ready = function(nb, x = null) {
     }
 }
 
-Bully.election = async function() {
+Bully.election = function() {
     console.log("Check the states of higher priority nodes");
     let priorityPlusOne = this.priority + 1;
     let restOfElements = this.servers.slice(priorityPlusOne);
 
     for (var i = 0; i < restOfElements.length; i++) {
         try {
-            // if (!this.connections[this.priority + 1 + i].invoke("areYouThere", function(error, res, more) {
-            //         console.log(res);
-            //     })) {throw error;}
-            let result = await driverMain("areYouThere",this.connections[this.priority+1+i]);
-            
-            // if (this.checkServerPool == null) {
-            //     this.S.coord = this.priority + 1 + i;
-            //     this.S.state = 'Normal';
-            //     this.check()
-            // }
-            // return;
+            let result = driverMain("areYouThere",this.connections[this.priority+1+i]);
             if (result != true){
                 console.log(`${restOfElements[i]} Timeout ! 1 (Checking for election)`)
                 continue;
@@ -147,10 +118,10 @@ Bully.election = async function() {
             this.connections[i].halt(this.priority); //only works for Bully objects
             console.log(`Prompt: ${this.servers[i]} server halted`);
         } catch (error) {
-            console.log(`Prompt: ${this.servers[i]} I have halted myself (I may be dead too)`); //for Clients
-            continue
+            console.log(`Prompt: ${this.servers[i]} I have halted myself (I may be dead too or can't connect)`); //for Clients
+            continue;
         }
-        this.S.Up.push(this.connections[i])
+        // this.S.Up.push(this.connections[i])
     }
 
     // reached the election point, now inform other nodes of new coordinator
@@ -184,6 +155,7 @@ Bully.election = async function() {
 }
 
 Bully.recovery = function() {
+	console.log('in recovery')
     this.S.halt = -1;
     this.election();
 }
@@ -202,17 +174,12 @@ Bully.check = function() {
             for (let i = 0; i < this.servers.length; i++) {
                 if (i != this.priority) {
                     try {
-                        // if (this.connections[i].invoke("areYouThere", function(error, res, more) {
-                        //         return res;
-                        //     }) == undefined) {
-                        //     // throw error;
-                        //     continue;
-                        // } else {
-                        //     var ans = this.connections[i].invoke("areYouNormal", function(error, res, more) {
-                        //         return res;
-                        //     })
-                        // }
-                        driverMain("areYouThere",this.connections[i]);
+
+                        let result = driverMain("areYouThere",this.connections[i]);
+                        if (result != true){
+                            console.log(`${restOfElements[i]} Timeout ! 5 (normal node unreachable)`)
+                            continue;
+                        }
 
                     } catch (error) {
                         // console.log(error);
@@ -261,17 +228,41 @@ Bully.timeout = function() {
 Bully.inititialize = function() {
     //Bully.pool = spawn;
     //Bully.recoveryThread = Bully.pool.spawn(Bully.recovery)
+    console.log('in initialize')
     this.recovery();
 
 }
 
-// const addr = process.argv[2];
-//console.log(addr)
-// const bully = new Bully(addr);
-// Bully.addr = addr;
-let s = new zerorpc.Server(Bully);
+Bully.syncFuncCall = function(func_name, client_test) {
+    return new Promise((resolve, reject) => {
+        // console.log()
+        client_test.invoke(func_name, function(error, res, more){
+            if (error || !res){
+                return reject(error);
+                // return reject();
+            }
+            else{
+                return resolve(res);
+            }
+            
+        });
+    });
+}
+
+var driverMain = async function(func_name, client_test){
+    var result = await this.syncFuncCall(func_name, client_test).catch((error) => {});
+    // if(!result){
+        // throw new Error;
+    //  return null;
+    // }
+    return result;
+}
+
+// console.log(typeof(Bully));
+// console.log(Bully);
+const s = new zerorpc.Server(Bully);
 
 s.bind('tcp://' + address);
 Bully.inititialize();
-//initialize server
+// initialize server
 console.log(`${address} initializing Server`);

@@ -8,9 +8,9 @@ var zerorpc = require("zerorpc");
 // });
 
 var kurwa = new Object();
-kurwa.hello = async function(reply){
+kurwa.hello = function(param, reply){
 	console.log('METHOD INVOKED!!!!!!!!!!!!!!!!!!!!!!!')
-    reply(null, 'KURWA!!!!!!!!!!!');
+    reply(null, param);
 };
 
 var server = new zerorpc.Server(kurwa);

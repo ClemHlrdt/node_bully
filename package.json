@@ -9,7 +9,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "node-fetch": "^2.1.2",
     "npm": "^6.1.0",
+    "promise.prototype.finally": "^3.1.0",
+    "shim": "^0.6.0",
     "sleep": "^5.1.1",
     "zerorpc": "^0.9.7"
   }

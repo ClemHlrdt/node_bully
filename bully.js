@@ -79,32 +79,29 @@ Bully.halt = function(number, reply) { //When halt is called...
 	reply(null, true);
 };
 
-Bully.newCoordinator = function(nb) { //When newCoordinator is called
+Bully.newCoordinator = function(nb, reply) { //When newCoordinator is called
 	console.log('call newCoordinator');
 	if (this.S.halt == nb && this.S.state == 'Election') { //if this.S.halt is True and this.S.state is Election
 		this.S.coord = nb; // we give this.S.coord the nb given as parameter
 		this.S.state = 'Reorganization'; // and change this.S.state to 'Reorganization'
+		reply(null, true);
 	}
 };
 
-Bully.ready = function(nb, x = null) { //When ready is called...
+Bully.ready = function(nb, reply) { //When ready is called...
 	console.log('call ready');
 	if (this.S.coord == nb && this.S.state == 'Reorganization') { //if this.S.coord == nb AND we have reorganization State,
-		//this.S.d = x;
 		this.S.state = 'Normal'; //Set the state back to Normal
+		reply(null, true);
 	}
 };
 
 Bully.syncFuncCall = function(func_name, client_test, param=null) {
 	return new Promise((resolve, reject) => {
-		// console.log()
 		client_test.invoke(func_name, param, function(error, res, more) {
 			if (error || !res) {
-				// return reject(error);
 				reject(error);
-				// return reject();
 			} else {
-				// return resolve(res);
 				resolve(res);
 			}
 
@@ -119,15 +116,15 @@ Bully.election = function() { // When election is called...
 	let restOfElements = this.servers.slice(priorityPlusOne); //list of elements from priorityPlusOne to the end
 	// console.log(this.priority)
 	for (let i = 0; i < restOfElements.length+1; i++) {
-			this.syncFuncCall("areYouThere", this.connections[priorityPlusOne+i], null)
+			this.syncFuncCall("areYouThere", this.connections[priorityPlusOne+i])
 				.then((resp) => {
 					// console.log(this.priority+1+i)
 					console.log(`resolved: ${resp}`);
 					if (this.checkServerPool == null) {
 						this.S.coord = this.priority + 1 + i; // change this.S.coord to priority +1 + value of index
 						this.S.state = 'Normal'; // change state to Normal
-						this.checkServerPool = "something";
-						// this.check();                                      // call check()
+						this.checkServerPool = true;
+						this.check();                                      // call check()
 					}
 					return;
 				})
@@ -136,8 +133,7 @@ Bully.election = function() { // When election is called...
 						console.log(`${restOfElements[i]} Timeout 1! Server offline, can't choose this as a coordinator`);
 					}
 					else{
-						console.log('halt all lower priority nodes including this node:');
-						// this.individualHalt(this.priority); //
+						console.log('halt all lower priority nodes including this node');
 						console.log(`${this.servers[this.priority]}: I halted myself`)
 						this.S.state = 'Election';
 						console.log(`I am ${this.S.state}`);
@@ -170,10 +166,10 @@ Bully.election = function() { // When election is called...
 															})
 															.catch(()=>{
 																console.log(`Prompt: ${this.servers[k]} Timeout 3, server not reachable, election has to be restarted`);
-																// this.election();
+																this.election();
 															})
 															.finally(() => {
-																console.log(counter2)
+																// console.log(counter2)
 																if(counter2==this.servers.length-2){
 																	var counter3 = 0;
 																	for(let l=0;l<this.S.Up.length;l++){
@@ -184,10 +180,10 @@ Bully.election = function() { // When election is called...
 																				})
 																				.catch(()=>{
 																					console.log(`Prompt: ${this.servers[l]} Timeout 4, server lost connection, election has to be restarted`);
-																					// this.election();
+																					this.election();
 																				}).finally(()=>{
 																					if(counter3==this.servers.length-2){
-																						// this.check();
+																						this.check();
 																						console.log("implement check!!!")
 																					}
 																					counter3++;
@@ -230,30 +226,16 @@ Bully.check = function() {
 
 			for (let i = 0; i < this.servers.length; i++) {
 				if (i != this.priority) {
-			// 		try {
-			// 			// console.log(this.connections[i])
-			// 			if (this.connections[i].invoke('areYouThere', function(error, res, more) {
-			// 					return res;
-			// 				}) == undefined) {
-			// 				throw error;
-			// 			} else {
-			// 				var ans = this.connections[i].invoke('areYouNormal', function(error, res, more) {
-			// 					return res;
-			// 				});
-			// 			}
-			// 		} catch (error) {
-			// 			// console.log(error);
-			// 			console.log(`${this.servers[i]} Timeout! 5 (normal node unreachable)`);
-			// 			continue;
-			// 			// return;
-			// 		}
-			// 		if (!ans) {
-			// 			this.election();
-			// 			return;
-			// 		}
-			// 	}
-			// }
-		
+					this.syncFuncCall("areYouNormal", this.connections[i])
+						.then((result) => {
+							if(!result){
+								console.log(`${this.servers[i]} this node is not normal! starting election`);
+								this.election();
+							}
+						})
+						.catch(() => {
+							console.log(`${this.servers[i]} this normal node is unreachable`);
+						});
 				} else if (this.S.state == 'Normal' && this.S.coord != this.priority) {
 					console.log('check coordinator\'s state');
 					this.syncFuncCall("areYouThere", this.connections[this.S.coord])
@@ -262,7 +244,7 @@ Bully.check = function() {
 						})
 						.catch(()=>{
 							console.log(`Prompt: ${this.servers[this.S.coord]} coordinator down, start election`);
-							// this.timeout();
+							this.timeout();
 						});
 				}
 			}
@@ -278,11 +260,11 @@ Bully.timeout = function() {
 			})
 			.catch(()=>{
 				console.log(`Prompt: ${this.servers[this.S.coord]} Timeout 6, coordinator down, start election`);
-				// this.election();
+				this.election();
 			});
 	} else {
 		console.log("starting election");
-		// this.election();
+		this.election();
 	}
 };
 

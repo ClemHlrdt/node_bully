@@ -217,71 +217,10 @@ Bully.election = function() { // When election is called...
 }		
 
 
-//         try {
-//             console.log('I am here');
-//             // let newConnection = this.connections[priorityPlusOne+i]
-//             // console.log(this.areYouThere(newConnection)) // true
-//             // Call AreYouThere
-//             this.connections[this.priority + 1 + i].invoke('areYouThere', function(error, res, more) {
-//                 console.log(res);
-//             });
-
-//             if (this.checkServerPool == null) {
-//                 this.S.coord = this.priority + 1 + i; // change this.S.coord to priority +1 + value of index
-//                 this.S.state = 'Normal'; // change state to Normal
-//                 //this.check();                                      // call check()
-//             }
-//             return;
-//         } catch (error) {
-//             //console.log(error);
-//             console.log(`${restOfElements[i]} Timeout ! 1 (Checking for election)`);
-//         }
-//     }
-
-//     // first time: this.priority = 0 for :9000, 1 for :9001
-//     
-
-//     // reached the election point, now inform other nodes of new coordinator
-//     console.log('inform all nodes of new coordinator:');
-//     this.S.coord = this.priority;
-//     this.S.state = 'Reorganization';
-//     console.log(`I am ${this.S.state}`);
-//     // console.log(this.S.Up)
-//     for (let j = 0; j < this.S.Up.length; j++) {
-//         try {
-//             this.S.Up[j].newCoordinator(this.priority);
-//         } catch (error) {
-//             console.log('Timeout! 3 (election has to be restarted');
-//             this.election();
-//             return;
-//         }
-//     }
-//     //this.connections[((this.priority + 1) + i)].areYouThere()
-//     // Reorganization
-//     for (let j = 0; j < this.S.Up.length; j++) {
-//         try {
-//             this.S.Up[j].ready(this.priority);
-//         } catch (error) {
-//             console.log('Timeout! 4');
-//             this.election();
-//             return;
-//         }
-//     }
-
-//     this.S.state = 'Normal';
-//     //this.checkServerPool = this.spawn(this.check());
-//     //this.check();
-
-// };
-
 Bully.recovery = function() {
 	this.S.halt = -1;
 	this.election();
 };
-
-// Bully.sayhi = function(reply) {
-//     reply(null, 'Kurwa I work!!');
-// };
 
 // Bully.check = function() {
 //     while (true) {
@@ -345,20 +284,22 @@ Bully.recovery = function() {
 //     }
 // };
 
-// Bully.timeout = function() {
-//     if (this.S.state == 'Normal' || this.S.state == 'Reorganization') {
-//         try {
-//             this.connections[this.S.coord].invoke('areYouThere', function(error, res, more) {
-//                 return res;
-//             });
-//         } catch (error) {
-//             console.log(`${this.servers[this.S.coord]} Timeout! 6`);
-//             this.election();
-//         }
-//     } else {
-//         this.election();
-//     }
-// };
+Bully.timeout = function() {
+    if (this.S.state == 'Normal' || this.S.state == 'Reorganization') {
+        this.syncFuncCall("areYouThere", this.connections[this.S.coord])
+        	.then(()=>{
+        		console.log(`Prompt: ${this.servers[this.S.coord]} coordinator alive`);
+        	})
+        	.catch(()=>{
+        		console.log(`Prompt: ${this.servers[this.S.coord]} Timeout 6, coordinator down, start election`);
+        		// this.election();
+        	});
+    } else {
+    	console.log("starting election");
+        // this.election();
+    }
+};
+
 Bully.inititialize = function() {
 	this.recovery();
 

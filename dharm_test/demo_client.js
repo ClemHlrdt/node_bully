@@ -3,7 +3,7 @@ const sleep = require('sleep');
 
 var client = new zerorpc.Client();
 // client.connect("tcp://127.0.0.1:4242");
-client.connect("tcp://127.0.0.1:9000");
+client.connect("tcp://127.0.0.1:4242");
 
 function invokerSleep(func_name, client_test, param) {
 	return new Promise((resolve, reject) => {
@@ -20,15 +20,16 @@ function invokerSleep(func_name, client_test, param) {
 	});
 }
 
-async function drive_invoker(func_name, client_test, param=null){
-	try{
-		let result = await invokerSleep(func_name, client_test, param);
-		console.log(result);
-		return result;	
-	} catch(error) {
-		// throw new Error(error);
-		console.log(error)
-	}
+function drive_invoker(func_name, client_test, param=null){
+	invokerSleep(func_name, client_test, param)
+		.then((resolve) => {
+			console.log(resolve)
+		})
+		.catch((error)=>{
+
+			console.error(error)
+			console.log("Something went wrong !")
+		})
 }
 
 drive_invoker("areYouNormal", client);

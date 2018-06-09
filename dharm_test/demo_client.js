@@ -13,6 +13,7 @@ function invokerSleep(func_name, client_test, param) {
 				return reject(error);
 			}
 			else{
+				console.log(res)
 				return resolve(res);
 			}
 			

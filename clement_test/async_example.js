@@ -7,7 +7,7 @@ fetch('https://jsonplaceholder.typicode.com/posts/1')
     sayHi("Clément"); // function call
   })
   .catch((err) => bad())
-  .finally(onFinally);
+  .finally(()=>{onFinally()});
 
 
 function onFinally(){

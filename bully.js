@@ -47,7 +47,7 @@ for (let i = 0; i < Bully.servers.length; i++) {
 		Bully.connections.push(Bully); //push it to the connections array
 	} else { //else
 		let options = {
-			timeout: 10,
+			timeout: 1,
 		};
 		let c = new zerorpc.Client(options); // create new client which will communicate with other servers from the list
 		c.connect('tcp://' + Bully.servers[i]); //connect it
@@ -60,14 +60,14 @@ for (let i = 0; i < Bully.servers.length; i++) {
 
 //Bully Methods
 Bully.areYouThere = function(param, reply) { //when areYouThere is called by a client,
-	console.log('METHOD INVOKED!!!!!!!!!!!!!!');
+	console.log('areYouThere INVOKED!');
 	//return true
 	reply(null, true); //return True using ZeroRPC Method
 	//return;
 };
 
 Bully.areYouNormal = function(param, reply) {
-	console.log('METHOD INVOKED!!!!!!!!!!!!!!');
+	console.log('areYouNormal INVOKED!');
 	if (this.S.state == 'Normal') {
 		// return true
 		reply(null, true);
@@ -79,12 +79,14 @@ Bully.areYouNormal = function(param, reply) {
 };
 
 Bully.halt = function(number, reply) { //When halt is called...
+	console.log("halt INVOKED!");
 	this.S.state = 'Election'; // we change the state of this server to Election
 	this.S.halt = number; //and change this.S.halt to the number given
 	reply(null, true);
 };
 
 Bully.newCoordinator = function(nb, reply) { //When newCoordinator is called
+	console.log("newCoordinator INVOKED!");
 	console.log('call newCoordinator');
 	if (this.S.halt == nb && this.S.state == 'Election') { //if this.S.halt is True and this.S.state is Election
 		this.S.coord = nb; // we give this.S.coord the nb given as parameter
@@ -95,6 +97,7 @@ Bully.newCoordinator = function(nb, reply) { //When newCoordinator is called
 };
 
 Bully.ready = function(nb, reply) { //When ready is called...
+	console.log("ready INVOKED!");
 	console.log('call ready');
 	if (this.S.coord == nb && this.S.state == 'Reorganization') { //if this.S.coord == nb AND we have reorganization State,
 		this.S.state = 'Normal'; //Set the state back to Normal
@@ -131,7 +134,7 @@ Bully.election = function() { // When election is called...
 		this.syncFuncCall('areYouThere', this.connections[priorityPlusOne+i])
 			.then((resp) => {
 				// console.log(this.priority+1+i)
-				console.log(`resolved: ${resp}`);
+				// console.log(`resolved: ${resp}`);
 				if (this.checkServerPool == null) {
 					this.S.coord = this.priority + 1 + i; // change this.S.coord to priority +1 + value of index
 					this.S.state = 'Normal'; // change state to Normal
@@ -254,7 +257,7 @@ Bully.check = function() {
 						// console.log(this.connections[i], i);
 						this.syncFuncCall('areYouNormal', this.connections[i])
 							.then((answer) => {
-								console.log('I work', answer);
+								// console.log('I work', answer);
 								if(!answer){
 									console.log(`${this.servers[i]} this node is not normal! starting election`);
 									checker_from_invoke = true;
@@ -280,8 +283,8 @@ Bully.check = function() {
 					});
 			}
 		}
-	},100);
-	sleep.sleep(10);
+	},5000);
+	// sleep.sleep(10);
 	// }
 	
 };

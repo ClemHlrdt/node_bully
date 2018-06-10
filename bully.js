@@ -31,6 +31,7 @@ Bully.addr = address; //assign it
 Bully.config_file = 'server_config_local'; //confile file name
 
 Bully.servers = []; //empty array of servers
+Bully.serverListBackup = [];
 
 //read config_file, put the content to an array, trim it and sort it
 let f = fs.readFileSync(Bully.config_file, 'utf8').trim().split('\n').sort();
@@ -130,16 +131,18 @@ Bully.election = function() { // When election is called...
 	let restOfElements = this.servers.slice(priorityPlusOne); //list of elements from priorityPlusOne to the end
 	// console.log(this.priority)
 	var counter4 = 0;
-	for (let i = 0; i < restOfElements.length; i++) {
+	var checker = false;
+	for (let i = 0; i <= restOfElements.length; i++) {
 		this.syncFuncCall('areYouThere', this.connections[priorityPlusOne+i])
 			.then((resp) => {
+				checker = true;
 				// console.log(this.priority+1+i)
 				// console.log(`resolved: ${resp}`);
 				if (this.checkServerPool == null) {
 					this.S.coord = this.priority + 1 + i; // change this.S.coord to priority +1 + value of index
 					this.S.state = 'Normal'; // change state to Normal
 					this.checkServerPool = true;
-					this.check();                                      // call check()
+					this.check();                                     // call check()
 				}
 				return;
 			})
@@ -150,7 +153,7 @@ Bully.election = function() { // When election is called...
 			})
 			.finally(() => {
 				// console.log(i, counter4);
-				if (counter4==restOfElements.length-1){
+				if (counter4==restOfElements.length && !checker){
 					console.log('halt all lower priority nodes including this node');
 					console.log(`${this.servers[this.priority]}: I halted myself`);
 					this.S.state = 'Election';
@@ -158,12 +161,14 @@ Bully.election = function() { // When election is called...
 					this.S.halt = this.priority;
 					this.S.Up = [];
 					this.S.Up.push(this);
+					this.serverListBackup.push(this.servers[this.priority]);
 					var counter = 0;
 					for (let j = 0; j <= this.priority; j++) {
 						this.syncFuncCall('halt', this.connections[j], this.priority)
 							.then(()=>{
 								console.log(`Prompt: ${this.servers[j]} server halted successfully`);
 								this.S.Up.push(this.connections[j]);
+								this.serverListBackup.push(this.servers[j]);
 							})
 							.catch(()=>{
 								if (j != this.priority){
@@ -186,11 +191,11 @@ Bully.election = function() { // When election is called...
 											// {
 											this.syncFuncCall('newCoordinator', this.S.Up[k], this.priority)
 												.then(()=>{
-													console.log(`Prompt: ${this.servers[k]} server received new coordinator`);
+													console.log(`Prompt: ${this.serverListBackup[k]} server received new coordinator`);
 												})
 												.catch(()=>{
 													if (this.S.Up[k] != this){
-														console.log(`Prompt: ${this.servers[k]} Timeout 3, server not reachable, election has to be restarted`);
+														console.log(`Prompt: ${this.serverListBackup[k]} Timeout 3, server not reachable, election has to be restarted`);
 														this.election();
 														return;
 													} else {
@@ -207,11 +212,11 @@ Bully.election = function() { // When election is called...
 														// if (this.servers[this.priority]!=this.servers[l]){
 															this.syncFuncCall('ready', this.S.Up[l], this.priority)
 																.then(()=>{
-																	console.log(`Prompt: ${this.servers[l]} server is ready (not coordinator)`);
+																	console.log(`Prompt: ${this.serverListBackup[l]} server is ready (not coordinator)`);
 																})
 																.catch(()=>{
 																	if (this.S.Up[l] != this){
-																		console.log(`Prompt: ${this.servers[l]} Timeout 4, server lost connection, election has to be restarted`);
+																		console.log(`Prompt: ${this.serverListBackup[l]} Timeout 4, server lost connection, election has to be restarted`);
 																		this.election();
 																		return;
 																	} else {
@@ -252,52 +257,50 @@ Bully.recovery = function() {
 };
 
 Bully.check = function() {
-	var checker_from_invoke = true;
+	// var checker_from_invoke = true;
 	// while (true) {
 	setInterval(()=>{
-		if (checker_from_invoke == true){
-			console.log('My address is ', this.addr);
-			checker_from_invoke = false;
-			if (this.S.coord == this.priority) {
-				console.log('I am Coordinator');
-			} else {
-				console.log('I am Normal');
-			}
-			//console.log('State:', this.S.state, "Priority", this.S.coord)
-			if (this.S.state == 'Normal' && this.S.coord == this.priority) {
-				for (let i = 0; i < this.servers.length; i++) {
-					if (i != this.priority) {
-						//console.log('I am working', i);
-						// console.log(this.connections[i], i);
-						this.syncFuncCall('areYouNormal', this.connections[i])
-							.then((answer) => {
-								// console.log('I work', answer);
-								if(!answer){
-									console.log(`${this.servers[i]} this node is not normal! starting election`);
-									checker_from_invoke = true;
-									this.election();
-									return;
-								}
-							})
-							.catch(() => {
-								console.log(`${this.servers[i]} Timeout 5! this normal node is unreachable`);
-								checker_from_invoke = true;
-							});
-					}
-				}
-			} else if (this.S.state == 'Normal' && this.S.coord != this.priority) {
-				console.log('check coordinator\'s state');
-				this.syncFuncCall('areYouThere', this.connections[this.S.coord])
-					.then(()=>{
-						console.log(`Prompt: ${this.servers[this.S.coord]} coordinator is up`);
-					})
-					.catch(()=>{
-						console.log(`Prompt: ${this.servers[this.S.coord]} coordinator down, start election`);
-						this.timeout();
-					});
-			}
+		console.log('My address is ', this.addr);
+		// checker_from_invoke = false;
+		if (this.S.coord == this.priority) {
+			console.log('I am Coordinator');
+		} else {
+			console.log('I am Normal');
 		}
-	},10000);
+		//console.log('State:', this.S.state, "Priority", this.S.coord)
+		if (this.S.state == 'Normal' && this.S.coord == this.priority) {
+			for (let i = 0; i < this.servers.length; i++) {
+				if (i != this.priority) {
+					//console.log('I am working', i);
+					// console.log(this.connections[i], i);
+					this.syncFuncCall('areYouNormal', this.connections[i])
+						.then((answer) => {
+							// console.log('I work', answer);
+							if(!answer){
+								console.log(`${this.servers[i]} this node is not normal! starting election`);
+								checker_from_invoke = true;
+								this.election();
+								return;
+							}
+						})
+						.catch(() => {
+							console.log(`${this.servers[i]} Timeout 5! this normal node is unreachable`);
+							// checker_from_invoke = true;
+						});
+				}
+			}
+		} else if (this.S.state == 'Normal' && this.S.coord != this.priority) {
+			console.log('check coordinator\'s state');
+			this.syncFuncCall('areYouThere', this.connections[this.S.coord])
+				.then(()=>{
+					console.log(`Prompt: ${this.servers[this.S.coord]} coordinator is up`);
+				})
+				.catch(()=>{
+					console.log(`Prompt: ${this.servers[this.S.coord]} coordinator down, start election`);
+					this.timeout();
+				});
+		}
+	},5000);
 	// sleep.sleep(10);
 	// }
 	

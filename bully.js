@@ -61,33 +61,24 @@ for (let i = 0; i < Bully.servers.length; i++) {
 
 //Bully Methods
 Bully.areYouThere = function(param, reply) { //when areYouThere is called by a client,
-	// console.log('areYouThere INVOKED!');
-	//return true
 	reply(null, true); //return True using ZeroRPC Method
-	//return;
 };
 
 Bully.areYouNormal = function(param, reply) {
-	// console.log('areYouNormal INVOKED!');
 	if (this.S.state == 'Normal') {
-		// return true
 		reply(null, true);
 	} else {
-		// return false
 		reply(null, false);
 	}
-	//return;
 };
 
 Bully.halt = function(number, reply) { //When halt is called...
-	// console.log("halt INVOKED!");
 	this.S.state = 'Election'; // we change the state of this server to Election
 	this.S.halt = number; //and change this.S.halt to the number given
 	reply(null, true);
 };
 
 Bully.newCoordinator = function(nb, reply) { //When newCoordinator is called
-	// console.log("newCoordinator INVOKED!");
 	console.log('call newCoordinator');
 	if (this.S.halt == nb && this.S.state == 'Election') { //if this.S.halt is True and this.S.state is Election
 		this.S.coord = nb; // we give this.S.coord the nb given as parameter
@@ -98,7 +89,6 @@ Bully.newCoordinator = function(nb, reply) { //When newCoordinator is called
 };
 
 Bully.ready = function(nb, reply) { //When ready is called...
-	// console.log("ready INVOKED!");
 	console.log('call ready');
 	if (this.S.coord == nb && this.S.state == 'Reorganization') { //if this.S.coord == nb AND we have reorganization State,
 		this.S.state = 'Normal'; //Set the state back to Normal
@@ -108,15 +98,12 @@ Bully.ready = function(nb, reply) { //When ready is called...
 };
 
 Bully.syncFuncCall = function(func_name, client_test, param=null) {
-	// console.log(client_test);
 	return new Promise((resolve, reject) => {
 		client_test.invoke(func_name, param, function(error, res, more) {
 			
 			if (error) {
-				//console.log('I HAVE crashed. function:', func_name);
 				return reject(error);
 			} else {
-				//console.log('I HAVE been solved :)');
 				return resolve(res);
 			}
 
@@ -129,15 +116,13 @@ Bully.election = function() { // When election is called...
 
 	let priorityPlusOne = this.priority + 1; // Priority + 1
 	let restOfElements = this.servers.slice(priorityPlusOne); //list of elements from priorityPlusOne to the end
-	// console.log(this.priority)
+
 	var counter4 = 0;
 	var checker = false;
 	for (let i = 0; i <= restOfElements.length; i++) {
 		this.syncFuncCall('areYouThere', this.connections[priorityPlusOne+i])
 			.then((resp) => {
 				checker = true;
-				// console.log(this.priority+1+i)
-				// console.log(`resolved: ${resp}`);
 				if (this.checkServerPool == null) {
 					this.S.coord = this.priority + 1 + i; // change this.S.coord to priority +1 + value of index
 					this.S.state = 'Normal'; // change state to Normal
@@ -152,7 +137,6 @@ Bully.election = function() { // When election is called...
 				}
 			})
 			.finally(() => {
-				// console.log(i, counter4);
 				if (counter4==restOfElements.length && !checker){
 					console.log('halt all lower priority nodes including this node');
 					console.log(`${this.servers[this.priority]}: I halted myself`);
@@ -174,21 +158,14 @@ Bully.election = function() { // When election is called...
 								if (j != this.priority){
 									console.log(`Prompt: ${this.servers[j]} Timeout 2, server not reachable, cannot halt`);
 								}
-								// continue;
 							})
 							.finally(() =>{
-								// this.S.Up.push(this.connections[j]);
-								// if(counter == this.priority){
-									// console.log(j, counter)
 									if (counter == this.priority) {
 										console.log('inform all nodes of new coordinator');
 										this.S.coord = this.priority;
 										this.S.State = 'Reorganization';
 										var counter2 = 0;
-										// console.log(this.S.Up.length);
 										for(let k = 0;k<this.S.Up.length;k++){
-											// if (this.servers[this.priority]!=this.servers[k]){
-											// {
 											this.syncFuncCall('newCoordinator', this.S.Up[k], this.priority)
 												.then(()=>{
 													console.log(`Prompt: ${this.serverListBackup[k]} server received new coordinator`);
@@ -203,13 +180,10 @@ Bully.election = function() { // When election is called...
 													}
 												})
 												.finally(() => {
-													// console.log(counter2)
-													// if(counter2==this.servers.length-2){
 													if (counter2 == this.S.Up.length-1) {
 														var counter3 = 0;
 														this.S.state = "Normal";
 														for(let l=0;l<this.S.Up.length;l++){
-														// if (this.servers[this.priority]!=this.servers[l]){
 															this.syncFuncCall('ready', this.S.Up[l], this.priority)
 																.then(()=>{
 																	console.log(`Prompt: ${this.serverListBackup[l]} server is ready (not coordinator)`);
@@ -233,13 +207,6 @@ Bully.election = function() { // When election is called...
 													}
 													counter2++;
 												});
-													// counter2++;
-												// });
-											// } else {
-											// 	this.S.state = 'Normal';
-											// 	this.S.coord = this.priority;
-											// 	this.check();
-											// }
 										}
 									}
 								counter++;
